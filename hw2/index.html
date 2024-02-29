@@ -1,7 +1,538 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Homework 2 index.html here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    background-color: white;
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+  kbd {
+    color: #121212;
+  }
+</style>
+<title>CS 184 Mesh Edit</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+
+<script>
+  MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']]
+    }
+  };
+</script>
+<script id="MathJax-script" async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
+</script>
+
+</head>
+
+
+<body>
+
+<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2024</h1>
+<h1 align="middle">Project 2: Mesh Edit</h1>
+<h2 align="middle">Lihao Zheng, Zheng Guo</h2>
+
+<br><br>
+
+<div>
+
+<h2 align="middle">Overview</h2>
+<p>
+  In this project, we implemented the construction of Bézier curves and surfaces, manipulation of triangle meshes via the half-edge data structure, and the execution of the loop subdivision algorithm for mesh refinement. It is very interesting to see how the points in space can be interpolated into curves, and how the mesh can be subdivided to be smoother. We struggle to debugging the pointers error, but it is very to rewarding the mesh eventually becomes smooth.
+</p>
+<br>
+
+
+<h2 align="middle">Section I: Bezier Curves and Surfaces</h2>
+
+<h3 align="middle">Part 1: Bezier Curves with 1D de Casteljau Subdivision</h3>
+
+<p>
+  The de Casteljau algorithm is a recursive method used for evaluating Bézier curves. The fundamental principle behind this algorithm is to use linear interpolation between consecutive control points to generate new points, which converge to a single point lying on the Bézier curve for a given parameter t.
+</p>
+<br>
+
+<p>
+  In our implementation for Task 1, we have utilized the de Casteljau's algorithm within the BezierCurve::evaluateStep function. The function takes a vector of 2D points, which represents the control points of the Bézier curve. By iterating over these control points, we apply the linear interpolation formula​ for each adjacent pair of points, where t is the curve parameter ranging from 0 to 1.
+</p>
+<br>
+
+<p>
+  The result of each interpolation is stored in a new vector of points, which represents the intermediate control points for the next subdivision level. These intermediate points are one step closer to the final curve point for the specified parameter t. The function is designed to perform only one level of subdivision per call, and hence, it should be called recursively to get the final point on the Bézier curve.
+</p>
+<br>
+
+<div align="middle">
+  <table style="width:100%;">
+    <tr align="center">
+      <td>
+        <img src="images/task_1_step_0.png" width="75%"/>
+        <figcaption>Figure 1.1 Bezier Curve with 6 control points</figcaption>
+      </td>
+      <td>
+        <img src="images/task_1_step_1.png" width="75%"/>
+        <figcaption>Figure 1.2 Bezier Curve subdivision 1</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/task_1_step_2.png" width="75%"/>
+        <figcaption>Figure 1.3 Bezier Curve subdivision 2</figcaption>
+      </td>
+      <td>
+        <img src="images/task_1_step_3.png" width="75%"/>
+        <figcaption>Figure 1.4 Bezier Curve subdivision 3</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/task_1_step_4.png" width="75%"/>
+        <figcaption>Figure 1.5 Bezier Curve subdivision 4</figcaption>
+      </td>
+      <td>
+        <img src="images/task_1_diff_curve.png" width="75%"/>
+        <figcaption>Figure 1.6 A Different Bezier Curve</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<br>
+
+
+<h3 align="middle">Part 2: Bezier Surfaces with Separable 1D de Casteljau</h3>
+
+<p>
+  To evaluate a point on a Bézier surface, we apply the de Casteljau algorithm in two directions, corresponding to the two parameters of the surface, u and v. We perform the de Casteljau algorithm twice: first, to compute points on n Bézier curves defined by each row of the grid using the u parameter, which results in n points. These points each lie on a Bézier curve that spans in the u direction. Second, we treat these n computed points as control points for a new Bézier curve, which we evaluate using the v parameter to obtain the final point on the Bézier surface.
+</p>
+
+<br>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/task_2_tp.png" align="middle" width="50%" />
+        <figcaption align="middle">Figure 2.1 Bezier Surface Teapot</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<br>
+
+
+<h2 align="middle">Section II: Triangle Meshes and Half-Edge Data Structure</h2>
+
+<h3 align="middle">Part 3: Area-Weighted Vertex Normals</h3>
+
+<p>
+  In Part 3, we aimed to enhance the visual fidelity of 3D models by calculating area-weighted vertex normals. An area-weighted vertex normal is a vector that represents the average direction of all the faces adjacent to a vertex, with each face's normal vector weighted by its area.
+</p>
+<br>
+<p>
+  The implementation process for computing these normals involves iterating over each face connected to a vertex using the half-edge data structure. For each face, we calculate its normal vector. Unlike a simple average, each face's normal contributes to the vertex normal proportional to the face's area, ensuring that larger faces have a greater influence on the final normal. After accumulating the weighted normals, we normalize the resulting vector to convert it into a unit vector, which is required for consistent lighting calculations in shaders.
+</p>
+<br>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/task_3_before.png" align="middle" width="75%" />
+        <figcaption align="middle">Figure 3.1 Flat Shaded Teapot</figcaption>
+      </td>
+      <td>
+        <img src="images/task_3_after.png" align="middle" width="75%" />
+        <figcaption align="middle">Figure 3.2 Phong Shaded Teapot</figcaption>
+      </td>
+    </tr>
+    
+  </table>
+</div>
+
+
+
+<br>
+
+
+<h3 align="middle">Part 4: Edge Flip</h3>
+
+<p>In Part 4, we implemented the edge flip operation. We follow the instuctions showed on the homework website <code>"http://15462.courses.cs.cmu.edu/fall2015content/misc/HalfedgeEdgeOpImplementationGuide.pdf"</code> </p>
+<p>Our implementation involves reassigning the connectivity of the half-edge data structure to reflect the new topology created by the edge flip. We have followed the steps in our implementation:</p>
+<ol>
+  <li>We identified the half-edges, vertices, edges, and faces involved in the flip operation.</li>
+  <li>We reassigned the <code>next</code>, <code>twin</code>, <code>vertex</code>, <code>edge</code>, and <code>face</code> pointers of each affected half-edge to point to the appropriate elements after the flip.</li>
+  <li>We updated the <code>halfedge</code> pointers of the involved vertices to ensure they point to a half-edge emanating from them.</li>
+  <li>We updated the <code>halfedge</code> pointers of the affected edges to point to one of their constituent half-edges.</li>
+  <li>We ensured the <code>halfedge</code> pointers of the involved faces point to one of the half-edges on their boundary.</li>
+  <li>Finally, we marked the flipped edge as new to indicate that it has been modified.</li>
+</ol>
+
+<p>A sketch map is also shown in Figure 4.4.
+
+<br>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/task_4_before.png" align="middle" width="75%" />
+        <figcaption align="middle">Figure 4.1 Teapot Before Edge Filp</figcaption>
+      </td>
+      <td>
+        <img src="images/task_4_after.png" align="middle" width="75%" />
+        <figcaption align="middle">Figure 4.2 Teapot After 1 Edge Filp</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/task_4_after2.png" align="middle" width="75%" />
+        <figcaption align="middle">Figure 4.3 Teapot After Multiple Edge Filps</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<br>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/task4_sketchmap.jpg" align="middle" width="50%" />
+        <figcaption align="middle">Figure 4.4 Sketch map helps to understand implementation</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<br>
+
+<br>
+
+<h3 align="middle">Part 5: Edge Split</h3>
+<p>For Task 5,  we implemented the edge split operation. We also follow the instruction shown in our homework website. We also attached a drawing that represents the mesh after spliting. (Figure5.5)</p>
+  <p>This operation involves inserting a new vertex at the midpoint of an edge, thereby subdividing the edge and adjacent faces into smaller triangles. Specifically, the operation targets a shared edge between two triangles and results in four triangles upon completion. Here is how we implemented the edge split operation:</p>
+<ol>
+  <li>We checked if the edge is not a boundary edge, as splitting a boundary edge is not allowed in this context.</li>
+  <li>We identified all the half-edges, vertices, edges, and faces associated with the edge to be split.</li>
+  <li>We created new mesh elements: one vertex at the midpoint of the original edge and additional half-edges, edges, and faces as needed to accommodate the split.</li>
+  <li>We reassigned pointers of the existing mesh elements to maintain the connectivity of the half-edge data structure, ensuring every element points to its correct counterpart post-operation.</li>
+  <li>We assigned the new vertex's position to the midpoint of the split edge and updated its <code>halfedge</code> pointer.</li>
+  <li>After updating all pointers, we deleted the original edge that was split.</li>
+</ol>
+<br>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/task_5_before_split.png" align="middle" width="75%" />
+        <figcaption align="middle">Figure 5.1 Teapot Before Edge Split</figcaption>
+      </td>
+      <td>
+        <img src="images/task_5_after_1_sp.png" align="middle" width="75%" />
+        <figcaption align="middle">Figure 5.2 Teapot After 1 Edge Split</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/task_5_after_many_sp.png" align="middle" width="75%" />
+        <figcaption align="middle">Figure 5.3 Teapot After Many Edge Splits</figcaption>
+      </td>
+      <td>
+        <img src="images/task_5_after_split_and_flip.png" align="middle" width="75%" />
+        <figcaption align="middle">Figure 5.4 Teapot After Edge Flip And Splits</figcaption>
+      </td>
+    </tr>
+    
+  </table>
+</div>
+
+<br>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/task5_sketchmap.jpg" align="middle" width="75%" />
+        <figcaption align="middle">Figure 5.5 Sketch Map helps to Understand Implementation & Debugging in Part6</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<br>
+
+<br>
+<br>
+<p>
+    DEBUGGING PROGRESS
+</p>
+<br>
+<p>In our implementation of edge split, we encountered a challenging bug causing segmentation faults when using <code>newEdge</code> or <code>newFace</code> functions. This bug was puzzling because other functions like <code>newVertex</code> and <code>newHalfedge</code> worked correctly.</p>
+<p>Eventually, we find where the issue is: new mesh elements needed immediate pointer initialization to valid existing elements to prevent segmentation faults. By following this approach and setting all new element pointers to point to valid existing mesh elements right after creation, we resolved the issue.</p>
+
+
+
+<br>
+<p>
+    EXTRA CREDIT PART
+</p>
+
+<p>In this implementation, we handle the case that the edges are boundary. The implementation is similar to part5 itself. We also attached
+    a sketch map that helps to understand. The only difference is that the outside halfedges or face has different pointers, which we learnt from homework website 
+    <code>"https://cs184.eecs.berkeley.edu/sp24/docs/half-edge-primer"</code>. The sketch map is attached as Figure 5.6.</p>
+
+  <p>The result comparison is shown in Figure 5.7 and Figure 5.8. We can easily find that after we handle the boundary edges split,
+    our split function can work on boundary edges. 
+  </p>
+    
+  <br>
+
+  <div align="middle">
+    <table style="width:100%">
+      <tr align="center">
+        <td>
+          <img src="images/task5_extra_sketchmap.jpg" align="middle" width="40%" />
+          <figcaption align="middle">Figure 5.6 Sketch Map helps to Understand Implementation(Part5 extra)</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+  
+  <br>
+
+  <div align="middle">
+    <table style="width:100%">
+      <tr align="center">
+        <td>
+          <img src="images/task_5_extra_before.jpg" align="middle" width="50%" />
+          <figcaption align="middle">Figure 5.7 Split Boundary Edges before Handling Spliting on Boundary Edges</figcaption>
+        </td>
+        <td>
+          <img src="images/task5_extra_after.jpg" align="middle" width="50%" />
+          <figcaption align="middle">Figure 5.8 Split Boundary Edges after Handling spliting on Boundary Edges</figcaption>
+        </td>
+      </tr>
+      
+    </table>
+  </div>
+  
+
+<br>
+
+
+<h3 align="middle">Part 6: Loop Subdivision for Mesh Upsampling</h3>
+<p>In Part 6, we implemented Loop Subdivision for mesh upsampling. The Loop Subdivision process is a two-step procedure: first, each triangle in the mesh is divided into four smaller triangles by connecting edge midpoints. Second, we update the vertex positions according to a weighted average scheme. Our implementation proceeded as follows:</p>
+<ol>
+    <li>We computed new positions for all vertices using Loop subdivision rules, marking each vertex to distinguish between original and new vertices.</li>
+    <li>We calculated the positions for vertices associated with edges, storing these in a temporary property.</li>
+    <li>We split every edge in the original mesh, carefully flagging edges to avoid splitting newly created edges.</li>
+    <li>We flipped edges that connected old and new vertices to restore the mesh's consistency.</li>
+    <li>Finally, we updated the vertex positions with the previously computed new positions.</li>
+</ol>
+
+<br>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/task_6_torus0.png" align="middle" width="75%" />
+        <figcaption align="middle">Figure 6.1 Torus Before Loop Subdivision</figcaption>
+      </td>
+      <td>
+        <img src="images/task_6_torus1.png" align="middle" width="75%" />
+        <figcaption align="middle">Figure 6.2 Torus After 1 Loop Subdivision</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/task_6_torus2.png" align="middle" width="75%" />
+        <figcaption align="middle">Figure 6.3 Torus After 2 Loop Subdivisions</figcaption>
+      </td>
+      <td>
+        <img src="images/task_6_torus3.png" align="middle" width="75%" />
+        <figcaption align="middle">Figure 6.4 Torus After 3 Loop Subdivisions</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<br>
+
+<p>Observing the progression in the images from a low-polygon mesh to a more refined one using Loop Subdivision, we notice that sharp corners and edges tend to become smoother (as seen in Figure 6.4). The Loop Subdivision process inherently averages vertex positions, which naturally rounds off sharp features with each subdivision iteration. This is because new vertices are created at midpoints of edges and original vertex positions are updated based on neighboring vertices, which dilutes the original sharp geometric features.</p>
+
+<br>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/task6_sharp0.png" align="middle" width="75%" />
+        <figcaption align="middle">Figure 6.5 Heavily Pre-split Corner Before Division</figcaption>
+      </td>
+      <td>
+        <img src="images/task6_sharp1.png" align="middle" width="75%" />
+        <figcaption align="middle">Figure 6.6 Heavily Pre-split Corner After Division</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/task6_sharp2.png" align="middle" width="75%" />
+        <figcaption align="middle">Figure 6.7 Heavily Pre-split Corner After Division From Side View</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<br>
+
+<p>
+  In Figure 6.5-6.7, pre-splitting some edges before applying Loop Subdivision (Figure 6.5) seems to have reduced the smoothing effect on sharp features. By strategically splitting edges and possibly flipping them before the main subdivision process, the algorithm can be guided to preserve more of the mesh's original sharpness. This can result in a refined mesh that retains more of the original shape's defining characteristics.
+</p>
+
+<br>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/task_6_cube0.png" align="middle" width="75%" />
+        <figcaption align="middle">Figure 6.8 Cube Before Loop Subdivision</figcaption>
+      </td>
+      <td>
+        <img src="images/task_6_cube1.png" align="middle" width="75%" />
+        <figcaption align="middle">Figure 6.9 Cube After 1 Loop Subdivision</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/task_6_cube2.png" align="middle" width="75%" />
+        <figcaption align="middle">Figure 6.10 Cube After 2 Loop Subdivisions</figcaption>
+      </td>
+      <td>
+        <img src="images/task_6_cube3.png" align="middle" width="75%" />
+        <figcaption align="middle">Figure 6.11 Cube After 3 Loop Subdivisions</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<br>
+
+<p>
+  We observe the effects of loop subdivision on a cube and the resulting symmetry. Initially, the cube displays sharp corners and edges. After applying several iterations of loop subdivision, the images show that the cube loses its sharp features, becoming smoother and more rounded. However, this process can cause slight asymmetry due to the uneven distribution of vertices and the application of subdivision rules that do not preserve the cube's original symmetry (Figure 6.8-11). Specifically, each vertex on the cube is connected to edges unsymmetrically.
+</p>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/task_6_sym1.png" align="middle" width="75%" />
+        <figcaption align="middle">Figure 6.12 Symmetric Cube Before Loop Subdivision</figcaption>
+      </td>
+      <td>
+        <img src="images/task_6_sym2.png" align="middle" width="75%" />
+        <figcaption align="middle">Figure 6.13 Symmetric Cube After 1 Loop Subdivision</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/task_6_sym3.png" align="middle" width="75%" />
+        <figcaption align="middle">Figure 6.14 Symmetric Cube After 2 Loop Subdivisions</figcaption>
+      </td>
+      <td>
+        <img src="images/task_6_sym4.png" align="middle" width="75%" />
+        <figcaption align="middle">Figure 6.15 Symmetric Cube After 3 Loop Subdivisions</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<br>
+
+<p>
+  To counteract this effect and achieve a more symmetrical result upon subdivision, a preprocessing can be applied: splitting the diagonal edge on every side of the cube to maintain symmetry. When the subdivision process is applied, the subdivision rules are applied uniformly across the mesh. This leads to a smoother and more symmetrical shape after multiple iterations of loop subdivision, as observed in the latter images. We suppose this approach works because loop subdivision averages the vertex positions, and by creating a mesh with evenly spaced vertices, the averaging process results in a uniform distribution of vertices after subdivision. The newly inserted vertices during pre-splitting act as control points that guide the subdivision surface, helping to preserve the geometric features while still refining the mesh.
+</p>
+
+<br>
+
+<p>
+  DEBUGGING PROGRESS
+</p>
+
+<p>In Part 6, we encountered two significant challenges. </p>
+<ol>
+  <li>The first issue emerged during the iteration of the initial edges present in the original mesh (as outlined in step 3). Contrary to my expectations, these weren't the original edges we intended to work with. Unraveling the root cause of this discrepancy proved somewhat challenging. Eventually, we pinpointed the issue to the <code>"SplitEdges"</code> function implemented in Part 5. Specifically, the problem arose when assigning new edges; we overlooked the fact that existing edges, which were not newly created, should not be reassigned with new pointers. 
+    In my schematic representation, we mistakenly directed the pointer for edge e2 to a newly split edge. Consequently, the pointer for e2 was redirected to this new edge, rather than maintaining its association with the intended original edge. 
+    This resulted in a scenario where iterating over the old edges in the original mesh did not yield the original 'e2' edge. To resolve this, we ensured that the pointers for edges that remained unchanged (such as e1, e2, e3, e4 in Figure 5.5) 
+    retained their original associations within the mesh. By avoiding alterations to these pointers, the addresses of the old edges remained consistent, effectively rectifying the issue. The accompanying image provides a visual representation of this pointer management strategy, illustrating the correct assignments that preserve the integrity of the original mesh structure.</li>
+  <li>The second issue involved the loss of <code>'newPosition'</code> data for vertices after the edge-splitting and deletion processes. This posed a challenge when attempting to assign new positions to vertices in a subsequent step. we addressed this by assigning the <code>'newPosition'</code> from the split edge to the new vertex at the time of its creation within the <code>"SplitEdges"</code> function of Part 5. This approach simplified the process of updating vertex positions later on.</li>
+</ol>
+
+<br>
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/cow.png" align="middle" width="50%" />
+        <figcaption align="middle">Smooth Cow After Loop Subdivision!</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<br>
+
+
+
+<h3 align="middle">Utilization of AI tools</h3>
+
+<p>To enhance the quality of my homework submissions, we have judiciously employed AI tools, specifically focusing on refining the language and clarity of my written work. 
+  This approach involves utilizing the AI's capabilities to review our initial drafts and suggest improvements in grammar, vocabulary, and overall coherence, ensuring that the content is articulated in a polished and professional manner. 
+  Importantly, our application of AI tools is restricted to linguistic enhancements and does not extend to generating code or content for our assignments. 
+  This time AI only helps us to polish the language in our write-up.</p>
+
+
+<!-- <h3 align="middle">Part 7 (Optional, Possible Extra Credit)</h3>
+<b>
+    Save your best polygon mesh as partsevenmodel.dae in your docs folder and show us a screenshot of the mesh in your write-up.
+</b>
+<p>
+    YOUR RESPONSE GOES HERE
+</p>
+<br>
+
+
+<b>
+    Include a series of screenshots showing your original mesh and your mesh after one and two rounds of subdivision. If you have used custom shaders, include screenshots of your mesh with those shaders applied as well.
+</b>
+<p>
+    YOUR RESPONSE GOES HERE
+</p>
+<br>
+
+
+<b>
+    Describe what you have done to enhance your mesh beyond the simple humanoid mesh described in the tutorial.
+</b>
+<p>
+    YOUR RESPONSE GOES HERE
+</p>
+<br> -->
+
+
+</body>
 </html>
