@@ -1,7 +1,573 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Homework 3 index.html here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    background-color: white;
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+  kbd {
+    color: #121212;
+  }
+</style>
+<title>CS 184 Path Tracer</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+
+<script>
+  MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']]
+    }
+  };
+</script>
+<script id="MathJax-script" async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
+</script>
+
+</head>
+
+
+<body>
+
+<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2023</h1>
+<h1 align="middle">Project 3-1: Path Tracer</h1>
+<h2 align="middle">Lihao Zheng, Zheng Guo</h2>
+
+<!-- Add Website URL -->
+<!-- <h2 align="middle">Website URL: <a href="TODO">TODO</a></h2> -->
+
+<!-- <br><br>
+
+
+<div align="center">
+  <table style="width=100%">
+      <tr>
+          <td align="middle">
+          <img src="images/example_image.png" width="480px" />
+          <figcaption align="middle">Results Caption: my bunny is the bounciest bunny</figcaption>
+      </tr>
+  </table>
+</div>
+
+<p>All of the text in your write-up should be <em>in your own words</em>. If you need to add additional HTML features to this document, you can search the <a href="http://www.w3schools.com/">http://www.w3schools.com/</a> website for instructions. To edit the HTML, you can just copy and paste existing chunks and fill in the text and image file names appropriately.</p>
+<o>The website writeup is intended to be a self-contained walkthrough of the assignment: we want this to be a piece of work which showcases your understanding of relevant concepts through both mesh images as well as written explanations about what you did to complete each part of the assignment. Try to be as clear and organized as possible when writing about your own output files or extensions to the assignment. We want to understand what you've achieved and how you've done it!</p> 
+<p>If you are well-versed in web development, feel free to ditch this template and make a better looking page.</p>
+
+
+<p>Here are a few problems students have encountered in the past. Test your website on the instructional machines early!</p>
+<ul>
+<li>Your main report page should be called index.html.</li>
+<li>Be sure to include and turn in all of the other files (such as images) that are linked in your report!</li>
+<li>Use only <em>relative</em> paths to files, such as <pre>"./images/image.jpg"</pre>
+Do <em>NOT</em> use absolute paths, such as <pre>"/Users/student/Desktop/image.jpg"</pre></li>
+<li>Pay close attention to your filename extensions. Remember that on UNIX systems (such as the instructional machines), capitalization matters. <pre>.png != .jpeg != .jpg != .JPG</pre></li>
+<li>Be sure to adjust the permissions on your files so that they are world readable. For more information on this please see this tutorial: <a href="http://www.grymoire.com/Unix/Permissions.html">http://www.grymoire.com/Unix/Permissions.html</a></li>
+<li>And again, test your website on the instructional machines early!</li>
+</ul>
+
+
+<p>Here is an example of how to include a simple formula:</p>
+<p align="middle"><pre align="middle">a^2 + b^2 = c^2</pre></p>
+<p>or, alternatively, you can include an SVG image of a LaTex formula.</p>
+
+<div> -->
+
+<h2 align="middle">Overview</h2>
+<p>
+  In this project, we implemented a physically-based renderer using a pathtracing algorithm, focusing on key aspects such as ray-scene intersection, acceleration structures, and physically based lighting and materials. Through the  ray tracing, direct and global illumination techniques, and the use of acceleration structures like Bounding Volume Hierarchy (BVH), we implemented realistic and efficient rendering. It takes a long time for us to debug, optimize and test our code for rendering. However, generating realistic images and implementing amazing lighting make the project the most rewarding one to do. 
+</p>
+<br>
+
+<h2 align="middle">Part 1: Ray Generation and Scene Intersection</h2>
+<!-- Walk through the ray generation and primitive intersection parts of the rendering pipeline.
+Explain the triangle intersection algorithm you implemented in your own words.
+Show images with normal shading for a few small .dae files. -->
+
+<p>
+  In Part 1 of the project, we generated camera rays by mapping normalized 2D image coordinates to 3D points on a virtual camera sensor. Each ray originates from the camera and passes through these points into the scene. We then test whether these rays intersect with any primitives—geometric shapes that make up the 3D models in the scene.
+</p>
+<br>
+
+<p>
+  The triangle intersection algorithm determines if a ray hits a triangle. It calculates the plane's intersection using the ray equation and triangle normal. If the intersection point lies within the triangle's boundaries and the valid range of the ray's travel, the intersection is confirmed. For intersections that affect rendering, the algorithm records the intersection point's position, the surface normal at that point, and the material properties for later shading computations.
+</p>
+
+<br>
+
+<!-- Example of including multiple figures -->
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/P1_CBempty.png" align="middle" width="400px"/>
+        <figcaption>Figure 1.1 Empty Room Rendering</figcaption>
+      </td>
+      <td>
+        <img src="images/P1_CBspheres.png" align="middle" width="400px"/>
+        <figcaption>Figure 1.2 Room with Spheres Rendering</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<br>
+
+
+<h2 align="middle">Part 2: Bounding Volume Hierarchy</h2>
+<!-- Walk through your BVH construction algorithm. Explain the heuristic you chose for picking the splitting point.
+Show images with normal shading for a few large .dae files that you can only render with BVH acceleration.
+Compare rendering times on a few scenes with moderately complex geometries with and without BVH acceleration. Present your results in a one-paragraph analysis. -->
+
+<p>
+  In Part 2, we implemented the Bounding Volume Hierarchy algorithm for rendering. The algorithm starts by creating a bounding box that encloses all primitives between the start and end iterators. If the number of primitives is less than or equal to the maximum size allowed in a leaf node, the current node becomes a leaf node. Otherwise, the algorithm chooses a splitting point based on the centroid of the bounding box, aiming to divide the primitives into two groups along the axis that provides the most balanced distribution.
+</p>
+<br>
+
+<p>
+  The heuristic employed for determining the splitting point involves evaluating the distribution of primitives across the three axes—X, Y, and Z. It assesses the balance of primitives by comparing the size of the groups on each side of the chosen centroid coordinate on each axis. The axis with the smallest difference between the left and right groups' sizes is chosen. This aims to maintain a balanced tree, where each node has a roughly equal number of primitives on both sides, leading to efficient ray-primitive intersection tests during the rendering phase.
+</p>
+
+<!-- Example of including multiple figures -->
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/P2_cow.png" align="middle" width="400px"/>
+        <figcaption>Figure 2.1 Cow Rendering</figcaption>
+      </td>
+      <td>
+        <img src="images/P2_maxplanck.png" align="middle" width="400px"/>
+        <figcaption>Figure 2.2 Max Planck Rendering</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/P2_lucy.png" align="middle" width="400px"/>
+        <figcaption>Figure 2.3 Lucy in Room Rendering</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<br>
+<p>
+  The introduction of BVH algorithm into our rendering pipeline has significantly optimized performance across various scenes with moderately complex geometries! The cow previously took about 10 seconds to render, but after optimizing with BVH, it took only about 1.4 seconds.
+</p>
+<br>
+
+<h2 align="middle">Part 3: Direct Illumination</h2>
+<!-- Walk through both implementations of the direct lighting function.
+Show some images rendered with both implementations of the direct lighting function.
+Focus on one particular scene with at least one area light and compare the noise levels in soft shadows when rendering with 1, 4, 16, and 64 light rays (the -l flag) and with 1 sample per pixel (the -s flag) using light sampling, not uniform hemisphere sampling.
+Compare the results between uniform hemisphere sampling and lighting sampling in a one-paragraph analysis. -->
+
+<p>
+  In Part 3 our project, we implemented the calculation of direct lighting on surfaces. There are two methods are used to estimate this lighting: hemisphere sampling and importance sampling. For hemisphere sampling, we use a uniform distribution over the hemisphere centered on the surface normal at the point of intersection. This technique generates rays in random directions over the hemisphere and checks if they hit a light source. If they do, the light contribution is calculated and added to the direct lighting estimate. The sample’s contribution is adjusted for the angle at which it hits the surface (using the cosine of the angle) and divided by the probability of that sample being chosen (since all directions are equally likely, this is a constant). 
+</p>
+
+<br>
+
+<p>
+  For importance sampling, we focus on sampling light directions that are more likely to contribute significantly to the direct lighting. Instead of sampling all directions equally, it samples based on the distribution of the lights in the scene. For each light source, it generates samples directed towards the light. If these rays do not intersect any other object before reaching the light, their contributions are added to the lighting estimate, again accounting for the incident angle and the sampling probability. This method results in less noise compared to hemisphere sampling because it concentrates samples in the directions where the light is coming from.
+</p>
+
+<br>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/P3_hemisphere_sampling.png" align="middle" width="400px"/>
+        <figcaption>Figure 3.1 Bunny rendered with direct lighting with uniform hemisphere sampling</figcaption>
+      </td>
+      <td>
+        <img src="images/P3_importance_sampling.png" align="middle" width="400px"/>
+        <figcaption>Figure 3.2 Bunny rendered with direct lighting with importance sampling</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<br>
+
+<p>
+  In comparing the results between uniform hemisphere sampling and importance sampling for direct lighting, we observe significant differences in the quality of the rendered images.  Uniform hemisphere sampling (Figure 3.1) shows a more scattered and noisy distribution of light. This is due to the equal probability of sampling all directions above the hemisphere, leading to many samples that do not contribute to the direct illumination, thereby increasing noise. In contrast, Importance sampling (Figure 3.2 presents a cleaner and more accurate depiction of lighting. Here, the sampling is concentrated towards the light sources, greatly reducing the noise and producing a more realistic representation of light as it interacts with the scene. 
+</p>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/P3_1_light_ray.png" align="middle" width="400px"/>
+        <figcaption>Figure 3.3 Bunny Rendered with 1-light-ray</figcaption>
+      </td>
+      <td>
+        <img src="images/P3_4_light_rays.png" align="middle" width="400px"/>
+        <figcaption>Figure 3.4 Bunny Rendered with 4-light-ray</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/P3_16_light_rays.png" align="middle" width="400px"/>
+        <figcaption>Figure 3.5 Bunny Rendered with 16-light-ray</figcaption>
+      </td>
+      <td>
+        <img src="images/P3_64_light_rays.png" align="middle" width="400px"/>
+        <figcaption>Figure 3.6 Bunny Rendered with 64-light-ray</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<br>
+
+<p>
+  Comparing the noise levels in soft shadows with varying light ray counts (Figure 3.3-3.6), we see that with 1 light ray, the noise is quite obvious, making the shadow under the bunny appear grainy. As we increase to 4 light rays, there's a noticeable reduction in noise, but it's still quite visible. With 16 light rays, the noise level decreases further, resulting in a softer and more natural shadow. Finally, at 64 light rays, the shadow's noise is significantly reduced, achieving a smooth and clean appearance.
+</p>
+
+
+<br>
+
+
+<h2 align="middle">Part 4: Global Illumination</h2>
+<!-- Walk through your implementation of the indirect lighting function.
+Show some images rendered with global (direct and indirect) illumination. Use 1024 samples per pixel.
+Pick one scene and compare rendered views first with only direct illumination, then only indirect illumination. Use 1024 samples per pixel. (You will have to edit PathTracer::at_least_one_bounce_radiance(...) in your code to generate these views.)
+For CBbunny.dae, compare rendered views with max_ray_depth set to 0, 1, 2, 3, and 100 (the -m flag). Use 1024 samples per pixel.
+Pick one scene and compare rendered views with various sample-per-pixel rates, including at least 1, 2, 4, 8, 16, 64, and 1024. Use 4 light rays.
+You will probably want to use the instructional machines for the above renders in order to not burn up your own computer for hours. -->
+
+<p>
+  In Part 4 of our project, the indirect lighting function we implemented works recursively to simulate multiple bounces of light within the scene. Initially, it adds the radiance from a single bounce of light. Then, for rays with depth greater than one, it samples an incoming direction based on the BSDF at the hit point, creates a new ray in this direction, and checks for an intersection with the scene. If an intersection occurs, Russian Roulette could used to decide whether to continue the recursion. If we continue, the function accumulates the radiance from subsequent bounces, scaling by the BSDF and the cosine of the angle between the incoming direction and the normal at the hit point, divided by the sampling probability and the continuation probability. This recursive process allows the simulation of complex light paths, capturing the subtle effects of global illumination. If the ray doesn't intersect the scene, recursion ends, and it may return a background color if an environment light is present. The overall effect of this implementation is to produce an image that realistically simulates the diffuse interplay of light throughout the scene.
+</p>
+
+<br>
+
+<!-- Example of including multiple figures -->
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/P4_global_direct.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.1 Sphere Rendered With Only Direct Illumination and 1024 Samples Per Pixel</figcaption>
+      </td>
+      <td>
+        <img src="images/P4_global_indirect.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.2 Sphere Rendered With Only Indirect Illumination and 1024 Samples Per Pixel(m=5)</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<br>
+
+<!-- Example of including multiple figures -->
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/P4_bunny_onlyDirect.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.3 Bunny Rendered With Only Direct Illumination</figcaption>
+      </td>
+      <td>
+        <img src="images/P4_bunny_onlyinDirect.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.4 Bunny Rendered With Only indirect Illumination(m=5)</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<br>
+<p>
+  The image rendered with only direct illumination (Figure 4.3), shows sharp, well-defined shadows and strong contrast, highlighting the shape and contours of the bunny but missing the subtleties of light interaction with the environment. The image rendered with only indirect illumination (Figure 4.4) has colors from surrounding walls due to the light bouncing off them, lending a more integrated and realistic look to the scene, despite the absence of strong, direct light and shadows.
+</p>
+<br>
+
+<!-- Example of including multiple figures -->
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/P4_bunny_0bounce_NoAccum.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.5 Bunny Rendered With Only 0-th Bounce of Light</figcaption>
+      </td>
+      <td>
+        <img src="images/P4_bunny_1bounce_NoAccum.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.6 Bunny Rendered With Only 1-st Bounce of Light</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/P4_bunny_2bounce_NoAccum.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.7 Bunny Rendered With Only 2-nd Bounce of Light</figcaption>
+      </td>
+      <td>
+        <img src="images/P4_bunny_3bounce_NoAccum.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.8 Bunny Rendered With Only 3-rd Bounce of Light</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/P4_bunny_4bounce_NoAccum.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.9 Bunny Rendered With Only 4-th Bounce of Light</figcaption>
+      </td>
+      <td>
+        <img src="images/P4_bunny_5bounce_NoAccum.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.10 Bunny Rendered With Only 5-th Bounce of Light</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<br>
+<p>
+  The above images shows the bunny with only the 0th to 5th bounces of light (Figure 4.5-4.10). From the 2nd bounce of light, we begin to see the effects of indirect illumination as the light reflects off one surface onto another, filling in shadows and bringing in color bleeding where the light picks up hues from the walls. By the 3rd bounce, these effects are more pronounced; the scene gains a level of realism unachievable with rasterization, which typically only accounts for direct light. These additional bounces contribute to the overall softening of shadows and enrich the scene with complex lighting interactions.
+</p>
+<br>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/P4_bunny_0bounce.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.11 Bunny Rendered With max_ray_depth=0</figcaption>
+      </td>
+      <td>
+        <img src="images/P4_bunny_1bounce.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.12 Bunny Rendered With max_ray_depth=1</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/P4_bunny_2bounce.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.13 Bunny Rendered With max_ray_depth=2</figcaption>
+      </td>
+      <td>
+        <img src="images/P4_bunny_3bounce.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.14 Bunny Rendered With max_ray_depth=3</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/P4_bunny_4bounce.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.15 Bunny Rendered With max_ray_depth=4</figcaption>
+      </td>
+      <td>
+        <img src="images/P4_bunny_5bounce.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.16 Bunny Rendered With 5-th max_ray_depth=5</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<br>
+
+<p>
+  The above images shows the bunny rendered from max_ray_depth from 0 to 5 (Figure 4.11-4.16). As we increase max_ray_depth from 0 to 5, the rendered images progressively capture more complex lighting interactions. With a depth of 0, we see only the light directly emitted by the light source. At a depth of 1, the first indirect light bounce adds softness to the shadows and begins to reveal the geometry of the scene more naturally. Moving to depths of 2 and 3, we observe further softening of shadows and more color bleeding from the environment, as light has more opportunities to bounce and scatter, filling the scene with subtle gradations of light and shade. At depths of 4 and 5, these effects are enhanced, but only have subtle differences.
+</p>
+
+<br>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/P4_bunny_0bounceRR.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.17 Bunny Rendered With Russian Roulette max_ray_depth=0</figcaption>
+      </td>
+      <td>
+        <img src="images/P4_bunny_1bounceRR.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.18 Bunny Rendered With Russian Roulette max_ray_depth=1</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/P4_bunny_2bounceRR.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.19 Bunny Rendered With Russian Roulette max_ray_depth=2</figcaption>
+      </td>
+      <td>
+        <img src="images/P4_bunny_3bounceRR.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.20 Bunny Rendered With Russian Roulette max_ray_depth=3</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/P4_bunny_4bounceRR.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.21 Bunny Rendered With Russian Roulette max_ray_depth=4</figcaption>
+      </td>
+      <td>
+        <img src="images/P4_bunny_100bounceRR.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.22 Bunny Rendered With Russian Roulette max_ray_depth=100</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<br>
+
+<p>
+  The below images shows sphere rendered from 1 sample per pixel to 1024 samples per pixel (Figure 4.23-4.28). As the sample-per-pixel rate increases from 1 to 1024, there is a clear progression in image quality. With only 1 sample per pixel, the image is extremely noisy, which obscures details and textures. At 2 samples per pixel, noise is still dominant, but there's a slight improvement in clarity. With 4 and 8 samples per pixel, noise reduces further. A notable quality shift occurs at 16 samples per pixel, where noise is significantly reduced, and the image starts to look more coherent. At 64 samples per pixel, the noise diminishes substantially, showing a much cleaner and more accurate rendering of the scene. Finally, at 1024 samples per pixel, the image appears smooth and nearly noise-free, showcasing detailed shadows and reflections with high fidelity to the true lighting of the scene.
+</p>
+
+<br>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/P4_sample_1pixel.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.23 Sphere Rendered with 1 sample per pixel</figcaption>
+      </td>
+      <td>
+        <img src="images/P4_sample_2pixel.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.24 Sphere Rendered with 2 sample per pixel</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/P4_sample_4pixel.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.25 Sphere Rendered with 4 sample per pixel</figcaption>
+      </td>
+      <td>
+        <img src="images/P4_sample_8pixel.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.26 Sphere Rendered with 8 sample per pixel</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/P4_sample_16pixel.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.27 Sphere Rendered with 16 sample per pixel</figcaption>
+      </td>
+      <td>
+        <img src="images/P4_sample_64pixel.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.28 Sphere Rendered with 64 sample per pixel</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/P4_sample_1024pixel.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.29 Sphere Rendered with 1024 sample per pixel</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<br>
+
+
+
+
+<h2 align="middle">Part 5: Adaptive Sampling</h2>
+<!-- Explain adaptive sampling. Walk through your implementation of the adaptive sampling.
+Pick one scene and render it with at least 2048 samples per pixel. Show a good sampling rate image with clearly visible differences in sampling rate over various regions and pixels. Include both your sample rate image, which shows your how your adaptive sampling changes depending on which part of the image you are rendering, and your noise-free rendered result. Use 1 sample per light and at least 5 for max ray depth. -->
+
+<p>
+  Adaptive sampling is a method that optimizes the rendering process by varying the number of samples per pixel based on the variance within each pixel, reducing computation where not necessary. Our implementation in Part 5 starts with a set number of samples per pixel and calculates the mean and variance of the radiance from these samples. After processing a batch of samples, it checks if the confidence interval, based on the sample variance and the mean, is below a specified tolerance. If so, it concludes that the pixel has converged to a stable color and stops sampling. If not, it continues to sample in batches until the maximum number of samples is reached or the pixel converges. This approach efficiently allocates more samples to complex areas with high variance, like edges or shadows, and fewer samples to uniform areas, leading to faster rendering times with maintained image quality.
+</p>
+<br>
+
+
+<!-- Example of including multiple figures -->
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/P5_bunny.png" align="middle" width="400px"/>
+        <figcaption>Figure 5.1 Bunny Rendered With Adaptive Sampling and 2048 Samples Per Pixel</figcaption>
+      </td>
+      <td>
+        <img src="images/P5_bunny_rate.png" align="middle" width="400px"/>
+        <figcaption>Figure 5.2 Sample Rate Image For Bunny</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/P5_dragon.png" align="middle" width="400px"/>
+        <figcaption>Figure 5.3 Dragon Rendered With Adaptive Sampling and 2048 Samples Per Pixel</figcaption>
+      </td>
+      <td>
+        <img src="images/P5_dragon_rate.png" align="middle" width="400px"/>
+        <figcaption>Figure 5.4 Sample Rate Image For Dragon</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<br>
+
+<h2 align="middle">Part 6: Extra Credit: Optimizing BVH Construction by Using Surface Area Heuristic</h2>
+
+<p>
+  In Part 2, as highlighted earlier, our BVH construction process relies on evaluating the centroids along the x, y, and z axes. This approach involves assessing the number of primitives encompassed by each subdivision of the BVH.
+</p>
+
+<p>However, in Part 6, we refine our approach by employing the Surface Area Heuristic (SAH) to construct an optimal BVH. This heuristic leverages a cost computation formula that considers both the number of primitives and the surface areas of the bounding volumes. The formula used in the SAH for BVH construction is designed to minimize the computational cost of ray-primitive intersections, thereby optimizing the rendering process.</p>
+<math>
+    <mi>Cost</mi>
+    <mo>=</mo>
+    <mi>C</mi><sub><mi>trav</mi></sub>
+    <mo>+</mo>
+    <mrow>
+        <mo>(</mo>
+        <mfrac>
+            <mi>A</mi><sub><mi>left</mi></sub>
+            <mi>A</mi><sub><mi>total</mi></sub>
+        </mfrac>
+        <mo>&#8901;</mo>
+        <mi>N</mi><sub><mi>left</mi></sub>
+        <mo>+</mo>
+        <mfrac>
+            <mi>A</mi><sub><mi>right</mi></sub>
+            <mi>A</mi><sub><mi>total</mi></sub>
+        </mfrac>
+        <mo>&#8901;</mo>
+        <mi>N</mi><sub><mi>right</mi></sub>
+        <mo>)</mo>
+        <mo>&#8901;</mo>
+        <mi>C</mi><sub><mi>int</mi></sub>
+    </mrow>
+</math>
+<p>where:</p>
+<ul>
+    <li><math><mi>C</mi><sub><mi>trav</mi></sub></math> is the cost to traverse a node.(Set to 1.0)</li>
+    <li><math><mi>A</mi><sub><mi>left</mi></sub></math> is the surface area of the left child bounding box.</li>
+    <li><math><mi>A</mi><sub><mi>right</mi></sub></math> is the surface area of the right child bounding box.</li>
+    <li><math><mi>A</mi><sub><mi>total</mi></sub></math> is the surface area of the parent node's bounding box.</li>
+    <li><math><mi>N</mi><sub><mi>left</mi></sub></math> is the number of primitives in the left child node.</li>
+    <li><math><mi>N</mi><sub><mi>right</mi></sub></math> is the number of primitives in the right child node.</li>
+    <li><math><mi>C</mi><sub><mi>int</mi></sub></math> is the cost of intersecting a single primitive.(Set to 1.5)</li>
+</ul>
+
+<p>Our construction algorithm utilizes the Surface Area Heuristic (SAH) to efficiently partition primitives into two groups, enhancing the BVH structure for ray tracing applications and, consequently, boosting rendering performance.</p>
+<p> The cost formula integral to SAH, as presented in our slides, adopts specific values for traversal and intersection operations. We assign a cost of 1.0 for traversal and 1.5 for intersection based on insights gained during parts 3 and 4 of our development process. Given the frequency of intersection checks during illumination calculations, this weighting of intersection costs is justified.</p>
+<p>Subsequently, we evaluate the costs associated with dividing the BVH along the x, y, and z axes. The axis that yields the lowest cost is selected for the split.</p>
+<p>Applying SAH to our BVH construction has yielded impressive results. When rendering the 'Dragon.dae' model using various construction strategies, the performance improvements are evident. Below are the outcomes from these rendering tests, demonstrating the effectiveness of the SAH approach in our application:</p>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/P6_Timecost_basic.png" align="middle" width="400px"/>
+        <figcaption>Figure 6.1 Time Cost of Dragon Rendered by Basic BVH Construction</figcaption>
+      </td>
+      <td>
+        <img src="images/P6_Timecost_optimized.png" align="middle" width="400px"/>
+        <figcaption>Figure 6.2 Time Cost of Dragon Rendered by BVH Construction Using SAH</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+
+<p>From the picture above we can find that the time cost reduced a lot after we optimized our method to construct the BVH! (129s VS 37s!!!)</p>
+
+
+
+<h2 align="middle">Utilization of AI tools</h2>
+<p>For our project, we've independently written all the code and conducted the debugging, with the exception of the coding in Part 6. For this section, we utilized the AI tool (ChatGPT) to communicate our foundational logic, such as the methodology behind our cost computation and the criteria for axis selection, which is based on the centroid of the total bounding box(As explained in Part6). We also presented the AI with our pre-existing code for BVH construction. The AI generated a code segment for us, although, as is often the case, the initial output required refinement. Through a process of careful debugging, we were able to successfully integrate the AI-generated code into our project. Indeed, AI has significantly streamlined our workflow.</p>
+
+<p>Additionally, we employed the AI to refine our written documentation, a practice we have found to be quite beneficial in previous projects.</p>
+
+</body>
 </html>
