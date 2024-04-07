@@ -1,7 +1,404 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Homework 4 index.html here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+</style>
+<title>CS 184 Mesh Editor</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+</head>
+
+
+<body>
+
+<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2024</h1>
+<h1 align="middle">Project 4: Cloth Simulator</h1>
+<h2 align="middle">Lihao Zheng, Zheng Guo</h2>
+
+<br><br>
+
+<div>
+
+<h2 align="middle">Overview</h2>
+<p>
+  In our project, we implemented a real-time simulation of cloth dynamics using a mass-spring system. We constructed the cloth model with discrete point masses connected by structural, shearing, and bending springs, allowing for the manipulation of properties like density, spring constant, and damping. The simulation incorporates numerical integration to animate cloth movement and integrates collision handling to prevent the cloth from intersecting with other objects, including self-collisions. Advanced rendering techniques were employed using the GLSL programming language, leveraging GPU capabilities for efficient shading operations. Our work of cloth simulation behaves realistically in response to physical forces and exhibits visually compelling interactions within various environmental settings, showcasing the cloth's dynamic and textural properties.
+</p>
+
+<br>
+
+<h2 align="middle">Part I: Masses and springs</h2>
+
+<p>
+  Below are images showing masses and springs in the wireframe with different constraints.
+</p>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/P1_structure.png" align="middle" width="400px"/>
+        <figcaption>Figure 1.1 Structure of pinned 2 wireframe</figcaption>
+      </td>
+      <td>
+        <img src="images/P1_NoShearing.png" align="middle" width="400px"/>
+        <figcaption>Figure 1.2 Wireframe without shearing constraints</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/P1_OnlyShearing.png" align="middle" width="400px"/>
+        <figcaption>Figure 1.3 Wireframe with only shearing constraints</figcaption>
+      </td>
+      <td>
+        <img src="images/P1_NoConstraint.png" align="middle" width="400px"/>
+        <figcaption>Figure 1.4 Wireframe with all constraints</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<br>
+
+<h2 align="middle">Part 2: Simulation via Numerical Integration</h2>
+
+<p>
+  In part 2, we observed the behavior of cloth under varying spring constant `ks` values. The spring constant directly influences the stiffness of the cloth. With a low k value, such as 10, the cloth is much more pliable and reactive to forces, resulting in a rapid and pronounced sag as gravity pulls it down. This is evident in the Figure 2.1, where the cloth dramatically droops due to its low resistance to bending and stretching.
+</p>
+
+
+
+<p>
+  Conversely, a high k value, exemplified by the second image where k = 100000 (Figure 2.2), causes the cloth to behave much more rigidly. The high stiffness means it resists the forces acting upon it, making it fall much more slowly and maintain a shape that's closer to its initial state without significant drooping or sagging. 
+</p>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/P2_k10.png" align="middle" width="400px"/>
+        <figcaption>Figure 2.1 Wireframe with k=10</figcaption>
+      </td>
+      <td>
+        <img src="images/P2_k100000.png" align="middle" width="400px"/>
+        <figcaption>Figure 2.2 Wireframe with k=100000</figcaption>
+      </td>
+    </tr>
+    </tr>
+  </table>
+</div>
+
+<br>
+
+<p>
+  Density is a critical factor in our cloth simulation as it affects the perceived weight and behavior of the fabric. In the Figure 2.3, with a density setting of 2 g/cm^2, the cloth appears to have a light fabric behavior, showing only a subtle sag due to its low weight. Because the density is minimal, the gravitational force has less impact on the cloth, causing it to exhibit less droop and maintain a relatively stable and uniform shape.
+</p>
+
+<p>
+  In contrast, the second image shows the cloth with a significantly higher density of 30,000 g/cm^2. This increased density gives the cloth a much heavier appearance, resulting in a pronounced droop, especially in the middle where the gravitational pull is most evident on the point masses. 
+</p>
+<br>
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/P2_density2.png" align="middle" width="400px"/>
+        <figcaption>Figure 2.3 Wireframe with density 2</figcaption>
+      </td>
+      <td>
+        <img src="images/P2_density30000.png" align="middle" width="400px"/>
+        <figcaption>Figure 2.4 Wireframe with density 30000</figcaption>
+      </td>
+    </tr>
+    </tr>
+  </table>
+</div>
+
+<br>
+
+<p>
+  With a low damping value of 0.01%, as seen in the Figure 2.5, the cloth is very lively. It will oscillate back and forth numerous times, reacting quickly to forces and taking longer to settle into a resting position. This simulates a lightweight fabric that, when disturbed, continues to move energetically due to minimal resistance against its motion.
+</p>
+
+<p>
+  In the Figure 2.6, where the damping is set to a much higher value of 0.8%, the cloth behaves quite differently. It exhibits a heavy, luxurious quality, moving slowly and settling rapidly. The high damping value implies that the cloth loses energy quickly, resulting in damped oscillations and a quick return to stillness after being disturbed.
+</p>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/P2_damping0.01.png" align="middle" width="400px"/>
+        <figcaption>Figure 2.5 Wireframe with damping 0.01%</figcaption>
+      </td>
+      <td>
+        <img src="images/P2_damping0.8.png" align="middle" width="400px"/>
+        <figcaption>Figure 2.6 Wireframe with damping 0.8%</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/P2_shaded.png" align="middle" width="400px"/>
+        <figcaption>Figure 2.7 Shaded cloth with damping 0.01%</figcaption>
+      </td>
+    </tr>
+    </tr>
+  </table>
+</div>
+
+<h2 align="middle">Part 3: Handling Collisions with Other Objects</h2>
+
+<p>
+  In part three of our task, we analyzed the draped result of a cloth over a sphere with different spring constants ks. Each image captures the cloth's final resting state using ks values of 500, 5000, and 50000, demonstrating how varying levels of stiffness affect the cloth's interaction with the underlying sphere.
+</p>
+
+<p>
+  For the lowest spring constant of ks=500 (Figure 3.1), the cloth exhibits high compliance and drapes closely over the sphere, conforming to its shape and resulting in many folds and creases. This is indicative of a softer material that can easily wrap around objects and adapt its shape accordingly. When the spring constant is set to the default value of ks=5000 (Figure 3.2), the cloth still conforms to the sphere but with less pronounced folding. The balance between stiffness and flexibility is evident as the cloth drapes over the sphere with a moderate number of creases, suggesting a semi-flexible fabric. At the highest spring constant of ks=50000 (Figure 3.3), the cloth is much stiffer and does not wrap around the sphere as tightly. The increased stiffness results in a cloth that maintains more of its initial shape and forms fewer creases, indicative of a more rigid or heavyweight fabric.
+</p>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/P3_k500.png" align="middle" width="400px"/>
+        <figcaption>Figure 3.1 Cloth interaction with sphere when k=500</figcaption>
+      </td>
+      <td>
+        <img src="images/P3_k5000.png" align="middle" width="400px"/>
+        <figcaption>Figure 3.2 Cloth interaction with sphere when k=5000</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/P3_k50000.png" align="middle" width="400px"/>
+        <figcaption>Figure 3.3 Cloth interaction with sphere when k=50000</figcaption>
+      </td>
+      <td>
+        <img src="images/P3_Plane.png" align="middle" width="400px"/>
+        <figcaption>Figure 3.4 Cloth interaction with plane</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<h2 align="middle">Part 4: Handling Self-collisions</h2>
+
+<p>
+  In part 4 of our cloth simulation task, we implemented the interaction between the cloth and itself. We also observed how varying the spring constant ks and the density affects the cloth's behavior as it collapses onto itself.
+</p>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/P4_stage1.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.1 Cloth falling 1</figcaption>
+      </td>
+      <td>
+        <img src="images/P4_Stage2.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.2 Cloth falling 2</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/P4_Stage3.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.3 Cloth falling 3</figcaption>
+      </td>
+      <td>
+        <img src="images/P4_Stage4.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.4 Cloth falling 4</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>
+  For the spring constant, two settings were tested: ks=500 and ks=50000. With a lower spring constant of ks=500, the cloth exhibits more flexibility and drapes with ease, resulting in many small and intricate folds as it falls onto itself (Figure 4.5). In contrast, with a much higher spring constant of ks=50000, shown in the Figure 4.6, the cloth is significantly more rigid. It resists bending and folding, leading to fewer but larger creases, retaining more of its structure even as it collapses.
+</p>
+
+<br>
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/P4_ks500.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.5 Cloth falls onto itself when ks=500</figcaption>
+      </td>
+      <td>
+        <img src="images/P4_ks50000.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.6 Cloth falls onto itself when ks=50000</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>
+  The density was also manipulated, with two distinct values: 5 g/cm^2 and 200 g/cm^2. The Figure 4.7, representing a cloth with a lower density of 5 g/cm^2, shows the cloth folding upon itself with a lighter, more billowing quality, indicating that it has less mass affecting its fall. The Figure 4.8, with a higher density of 200 g/cm^2, depicts the cloth with sharper, more defined creases and a closer proximity to the ground. The increased density gives the cloth a heavier appearance, and its additional weight intensifies the pressure on the folds, leading to a more compacted result.
+</p>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/P4_density5.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.7 Cloth falls onto itself when density=5</figcaption>
+      </td>
+      <td>
+        <img src="images/P4_density200.png" align="middle" width="400px"/>
+        <figcaption>Figure 4.8 Cloth falls onto itself when density=200</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<h2 align="middle">Part 5: Shaders</h2>
+
+<p>
+  A shader program in computer graphics is a set of instructions that dictate how vertices and pixels are processed to display objects on the screen. The vertex shader processes each vertex's position and normal vectors, transforming them into screen coordinates and preparing data like texture coordinates for the next stage. The fragment shader takes over after rasterization, which turns the shapes into a series of fragments (potential pixels). It receives interpolated data from the vertex shader, applying calculations for light, color, and texture, ultimately writing the final color.
+</p>
+
+<p>
+  The Blinn-Phong shading model breaks down light interaction into three components: Ambient shading, diffuse shading, and specular shading. Ambient shading provides a base level of light that illuminates all parts of the scene uniformly, ensuring that no area is completely dark. Diffuse shading depends on the angle between the light source and the surface normal. It creates the soft gradients of light and dark that give objects a sense of depth and form. Specular shading is what adds highlights to objects, simulating the bright spots of light that reflect directly from surfaces. It's most noticeable when the view direction is close to the reflection direction of the light. This is calculated using the angle between the half vector (which is the bisector of the light direction and the view direction) and the surface normal.
+</p>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/P5_ambientComp.png" align="middle" width="400px"/>
+        <figcaption>Figure 5.1 Blinn-Phong with only ambient component</figcaption>
+      </td>
+      <td>
+        <img src="images/P5_diffuseComp.png" align="middle" width="400px"/>
+        <figcaption>Figure 5.2 Blinn-Phong with only diffuse component</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/P5_specularComp.png" align="middle" width="400px"/>
+        <figcaption>Figure 5.3 Blinn-Phong with only specular component</figcaption>
+      </td>
+      <td>
+        <img src="images/P5_Phong.png" align="middle" width="400px"/>
+        <figcaption>Figure 5.4 Blinn-Phong entire model</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/P5_custom_texture.png" align="middle" width="400px"/>
+        <figcaption>Figure 5.5 Custom texture mapped</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>
+  Bump mapping creates the illusion of depth and texture on the surface by manipulating the surface normals during the shading process. It doesn't alter the actual shape or silhouette of the object; the perceived texture changes depending on the angle of the light and the viewer's perspective. The effect is purely visual, as the geometry of the object remains unchanged.
+</p>
+
+<p>
+  Displacement mapping, on the other hand, modifies the actual geometry of the surface by displacing vertices along their normals. This displacement is based on a texture map that dictates how much each vertex should be moved, creating real geometric details. This technique results in changes to the object's silhouette and can cast realistic shadows, making the texture appear more pronounced and tangible.
+</p>
+
+<p>
+  In the images below, bump mapping shows a sphere with an apparent textured surface where the lighting creates the illusion of depth (Figure 5.6). With displacement mapping, the sphere's surface shows tangible changes in geometry, with the texture visibly affecting the object's contour and casting shadows. (Figure 5.8).
+</p>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/P5_bump_ball.png" align="middle" width="400px"/>
+        <figcaption>Figure 5.6 Bump mapping shaded sphere</figcaption>
+      </td>
+      <td>
+        <img src="images/P5_bump_cloth.png" align="middle" width="400px"/>
+        <figcaption>Figure 5.7 Bump mapping shaded cloth</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/P5_displacement.png" align="middle" width="400px"/>
+        <figcaption>Figure 5.8 Displacement mapping shaded sphere</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>
+  When adjusting the coarseness of the sphere mesh, the difference between bump mapping and displacement mapping becomes more apparent. Bump mapping alters the surface normals to create the illusion of texture and depth, but it does not change the actual geometry of the mesh. Therefore, when the mesh is coarse (with -o 16 -a 16 settings, meaning fewer vertices and larger polygons), the bump mapping still provides a convincing illusion of a textured surface without visibly changing the shape of the sphere. At a higher resolution (with -o 128 -a 128 settings), the bump mapping looks finer, but the overall appearance does not change dramatically since the actual geometry remains the same in both cases.
+</p>
+
+<p>
+  Displacement mapping, however, actually modifies the positions of vertices based on the texture map. With a coarser mesh (-o 16 -a 16), the fewer vertices can cause the displaced surface to appear faceted or chunky, as there are fewer points to accurately represent the displacement dictated by the texture map. The shape of the sphere is noticeably altered, revealing the underlying mesh structure. On a finer mesh (-o 128 -a 128), the increased number of vertices allows for a smoother and more detailed displacement that more closely matches the texture map.
+</p>
+
+<br>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/P5_mirrorBall.png" align="middle" width="400px"/>
+        <figcaption>Figure 5.9 Mirror shaded sphere</figcaption>
+      </td>
+      <td>
+        <img src="images/P5_mirrorCloth.png" align="middle" width="400px"/>
+        <figcaption>Figure 5.10 Mirror shaded cloth</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<h3 align="middle">Extra Credit</h3>
+
+<p>In the extra credit segment, we expanded upon the foundational shader techniques by combining different mappings to produce a suite of enhanced visual effects. In the following part, we all used the displacement mapping. The first variation fused texture mapping with a mirror effect, allowing objects to simultaneously exhibit detailed surfaces and reflect their environment. This layering enriched the scene with a realistic and intricate aesthetic.(Figure 5.11)</p>
+<p>Next, we experimented with a mirror and Phong shader mix, which simplified the scene to focus on the reflective and lighting dynamics without the texture detail. This minimalist approach highlighted the environmental reflections and the contours shaped by light and shadow.</p>
+<p>Lastly, we combine the mappings together, we elevated this concept by integrating the Phong lighting model, introducing an interplay of diffuse and specular reflections with the existing texture and mirror effects. This combination brought out the subtleties of light interaction, furthering the depth and realism of the objects.(Figure 5.13)</p>
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/Extra_texture+mirror.png" align="middle" width="400px"/>
+        <figcaption>Figure 5.11 Mirror+Texture</figcaption>
+      </td>
+      <td>
+        <img src="images/Extra_mirror+phong.png" align="middle" width="400px"/>
+        <figcaption>Figure 5.12 Mirror+Phong</figcaption>
+      </td>
+    </tr>
+
+    <tr align="center">
+      <td>
+        <img src="images/Extra_all.png" align="middle" width="400px"/>
+        <figcaption>Figure 5.13 Mirror+Phong+Texture</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+
+
+
+<h2 align="middle">Utilization of AI Tools in the Project</h2>
+
+<p>In the development of our project, we leveraged ChatGPT for efficient debugging and to enhance our documentation. As an AI-driven assistant, ChatGPT helped us identify and resolve coding errors quickly by providing clear, actionable feedback. This tool significantly streamlined our debugging process, allowing for more focused and effective error resolution. Additionally, ChatGPT aided in polishing the language of our technical write-ups, ensuring our documentation was clear and professional. By integrating ChatGPT's advanced language capabilities, we achieved concise and reader-friendly materials that effectively communicated complex concepts.
+</p>
+
+
+
+
+</body>
 </html>
+
